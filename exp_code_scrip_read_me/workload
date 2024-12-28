@@ -1,0 +1,167 @@
+The provided script (`create_workload.py`) is a tool for generating transaction workloads and optionally JSON configuration files for network simulation using OMNeT++. It supports various graph topologies and transaction distribution types. Here's a detailed breakdown of the code:
+
+---
+
+### **1. Purpose**
+The script generates:
+- **Transaction workloads** for a payment network simulation.
+- **JSON configuration files** for testing distributed implementations like the Lightning Network Daemon (LND).
+
+---
+
+### **2. Key Components**
+
+#### **Imports**
+```python
+import sys
+import textwrap
+import argparse
+import numpy as np
+import networkx as nx
+import random
+import json
+from config import *
+from max_circulation import *
+import pickle
+from functools import reduce
+```
+- **Modules**:
+  - `numpy` and `random`: Generate workloads based on various distributions.
+  - `networkx`: Create and manipulate graph topologies.
+  - `json`: Generate JSON configuration files.
+  - `pickle`: Serialize data for later use.
+
+---
+
+#### **Argument Parsing**
+The script uses `argparse` to take various inputs:
+```python
+parser = argparse.ArgumentParser(description="Create arbitrary txn workloads to run the omnet simulator on")
+parser.add_argument('--graph-topo', choices=[...], help='type of graph', default='simple_line')
+parser.add_argument('--payment-graph-dag-percentage', type=int, help='percentage of circulation', default=0)
+parser.add_argument('--topo-filename', type=str, help='name of topology file')
+parser.add_argument('output_file_prefix', type=str, help='output workload file', default='simple_workload.txt')
+parser.add_argument('interval_distribution', choices=['uniform', 'poisson', 'kaggle'], help='time between txns', default='poisson')
+parser.add_argument('--experiment-time', dest='total_time', type=int, help='time to generate txns', default=30)
+parser.add_argument('--txn-size-mean', dest='txn_size_mean', type=int, help='mean txn size', default=1)
+parser.add_argument('--log-normal', action='store_true', help='txns exponential in size')
+parser.add_argument('--kaggle-size', action='store_true', help='txns kaggle size')
+parser.add_argument('--generate-json-also', action="store_true", help="generate JSON file")
+parser.add_argument('--balance-list', type=int, nargs='+', dest='balance_list', default=[100])
+parser.add_argument('--timeout-value', type=float, help='timeout for all txns', default=5)
+parser.add_argument('--scale-amount', type=int, help='scale mean demand by', default=5)
+parser.add_argument('--run-num', type=int, help='influences the seed', default=1)
+```
+
+Key arguments:
+- **Graph Topology**: `--graph-topo` specifies the topology (e.g., `simple_line`, `dag_example`).
+- **Distribution**: `interval_distribution` defines the time distribution between transactions (`uniform`, `poisson`, or `kaggle`).
+- **Transaction Size**: Controlled via `--txn-size-mean` and `--log-normal`.
+- **Output**: `output_file_prefix` and `--generate-json-also`.
+
+---
+
+#### **Graph Topology Parsing**
+```python
+def parse_topo(topo_filename):
+    g = nx.Graph()
+    router_graph = nx.Graph()
+    end_host_map = dict()
+    ...
+    for line in topo_file:
+        ...
+        g.add_edge(n1[1], n2[1])
+        ...
+    return g, router_graph, end_host_map
+```
+- **Purpose**: Parses a custom topology file to create a graph representation.
+- **Graph Types**:
+  - `g`: Full graph with routers and end hosts.
+  - `router_graph`: Only routers.
+  - `end_host_map`: Maps end hosts to routers.
+
+---
+
+#### **Transaction Workload Generation**
+```python
+def generate_workload_standard(...):
+    if payment_graph_topo == 'hotnets_topo':
+        start_nodes = [0, 1, 2, 2, 3, 3, 4]
+        end_nodes = [1, 3, 1, 4, 2, 0, 2]
+        ...
+    ...
+    write_txns_to_file(filename + '_workload.txt', start_nodes, end_nodes, amt_absolute, ...)
+```
+- **Topology-Specific Logic**:
+  - Defines `start_nodes`, `end_nodes`, and transaction amounts (`amt_absolute`).
+  - Calls `write_txns_to_file` to save transactions.
+
+---
+
+#### **Demand Generation**
+1. **Circulation Demand**:
+   ```python
+   def circ_demand(node_list, mean, std_dev):
+       ...
+       demand_dict[j, k] = 1
+   ```
+   - Ensures balanced transaction demand cycles.
+
+2. **DAG Demand**:
+   ```python
+   def dag_demand(node_list, mean, std_dev, skew_param=5, gen_method="topological_sort"):
+       ...
+       demand_dict[node, receiver] = 1
+   ```
+   - Generates Directed Acyclic Graph (DAG) demands based on topology.
+
+---
+
+#### **Transaction File Writing**
+```python
+def write_txns_to_file(filename, start_nodes, end_nodes, amt_absolute, workload_type, ...):
+    ...
+    for k in range(len(start_nodes)):
+        cur_time = 0
+        while cur_time < total_time:
+            txn_size = txn_size_mean
+            outfile.write(str(txn_size) + " " + str(cur_time) + " " + str(start_nodes[k]) + " " + str(end_nodes[k]) + "\n")
+```
+- Supports different interval distributions:
+  - **Uniform**: Fixed transaction intervals.
+  - **Poisson**: Intervals follow exponential distribution.
+  - **Kaggle**: Uses Kaggle datasets for realistic distributions.
+
+---
+
+#### **JSON File Generation**
+```python
+def generate_json_files(filename, graph, inside_graph, start_nodes, end_nodes, amt_absolute):
+    ...
+    json.dump(json_string, outfile, indent=8)
+```
+- Creates JSON files with:
+  - Node and edge configurations.
+  - Channel capacities and transaction demands.
+
+---
+
+### **3. Execution Flow**
+1. **Parse Arguments**:
+   - Determines topology, distribution, and other parameters.
+
+2. **Generate Workload**:
+   - Standard or custom topology-based workload.
+   - Calls `write_txns_to_file` and optionally `generate_json_files`.
+
+3. **Save Results**:
+   - Outputs transaction workloads (`*_workload.txt`) and configuration files (`*.json`).
+
+---
+
+### **Key Highlights**
+- **Flexibility**: Supports multiple topologies and workload distributions.
+- **Extensibility**: Can adapt to custom topologies via `parse_topo`.
+- **Practicality**: Generates realistic workloads for simulation and testing.
+
+Let me know if you need deeper insights into specific parts!

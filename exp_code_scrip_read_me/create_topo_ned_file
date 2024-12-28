@@ -1,0 +1,160 @@
+The script `create_topo_ned_file.py` generates **network topology files** in the OMNeT++ NED format, along with intermediate topology files. It supports various graph types and routing algorithms for simulating payment channel networks or distributed systems. Here’s an in-depth breakdown of its functionality:
+
+---
+
+## **1. Key Features**
+### Purpose
+1. **Generate a Topology**: Creates graph-based network topologies using predefined structures (e.g., `small_world`, `scale_free`, etc.).
+2. **Output in NED Format**: Converts the topology into a NED file for use in OMNeT++ simulations.
+3. **Support Multiple Routing Algorithms**: Includes routing logic (e.g., shortest path, DCTCP-based, waterfilling).
+
+---
+
+## **2. Argument Parsing**
+The script uses `argparse` to allow customization:
+```python
+parser = argparse.ArgumentParser(description="Create arbitrary topologies to run the omnet simulator on")
+parser.add_argument('--num-nodes', type=int, dest='num_nodes', help='number of nodes in the graph', default=20)
+parser.add_argument('--delay-per-channel', type=int, dest='delay_per_channel', help='delay between nodes (ms)', default=30)
+parser.add_argument('graph_type', choices=[...], help='type of graph', default='small_world')
+parser.add_argument('--balance-per-channel', type=int, dest='balance_per_channel', default=100)
+parser.add_argument('--topo-filename', dest='topo_filename', type=str, help='name of intermediate output file', default="topo.txt")
+parser.add_argument('--network-name', type=str, dest='network_name', help='name of the output ned filename', default='simpleNet')
+parser.add_argument('--separate-end-hosts', action='store_true', help='do you need separate end hosts that only send transactions')
+parser.add_argument('--randomize-start-bal', type=str, dest='randomize_start_bal', help='Randomize initial balances', default='False')
+parser.add_argument('--random-channel-capacity', type=str, dest='random_channel_capacity', help='Random channel capacities', default='False')
+parser.add_argument('--lnd-channel-capacity', type=str, dest='lnd_capacity', help='Use Lightning Network (LND) channel capacities', default='False')
+parser.add_argument('--rebalancing-enabled', type=str, dest="rebalancing_enabled", help="Enable rebalancing on channels", default="false")
+```
+
+### Key Arguments
+1. **Graph Characteristics**:
+   - `--num-nodes`: Number of nodes in the topology.
+   - `graph_type`: Type of topology (e.g., `small_world`, `scale_free`).
+
+2. **Channel Characteristics**:
+   - `--balance-per-channel`: Balance on each channel (can be randomized).
+   - `--delay-per-channel`: Delay between connected nodes.
+
+3. **Output Files**:
+   - `--topo-filename`: Intermediate topology file.
+   - `--network-name`: Base name for the generated NED files.
+
+4. **Routing Logic**:
+   - Routing algorithms like `shortestPath`, `DCTCP`, `waterfilling`.
+
+---
+
+## **3. Graph Generation**
+The `generate_graph` function creates network topologies based on the specified type:
+```python
+def generate_graph(size, graph_type):
+    if graph_type == 'random':
+        G = nx.dense_gnm_random_graph(size, size * 5, seed=SEED)
+    elif graph_type == 'small_world':
+        G = nx.watts_strogatz_graph(size, 8, 0.25, seed=SEED)
+    elif graph_type == 'scale_free':
+        G = nx.barabasi_albert_graph(size, 8, seed=SEED)
+    elif graph_type == 'tree':
+        G = nx.random_tree(size, seed=SEED)
+    ...
+    return G
+```
+- **Types**:
+  - **`random`**: Dense random graph.
+  - **`small_world`**: Models local clustering and long-distance connections.
+  - **`scale_free`**: Emulates power-law distributions (used in real-world networks).
+  - **`tree`**: Simple hierarchical structure.
+
+---
+
+## **4. Intermediate Topology File**
+The `print_topology_in_format` function creates an intermediate topology file:
+```python
+def print_topology_in_format(G, balance_per_channel, delay_per_channel, output_filename, separate_end_hosts, ...):
+    ...
+    for e in G.edges():
+        f1.write(str(e[0]) + "r " + str(e[1]) + "r ")
+        f1.write(str(delay_per_channel) + " " + str(delay_per_channel) + " ")
+        ...
+    if separate_end_hosts:
+        for n in G.nodes():
+            f1.write(str(n) + "e " + str(n) + "r ")
+            ...
+```
+- **Format**:
+  - Each line represents a link between two nodes with attributes:
+    - Delays in both directions.
+    - Channel balances.
+- **Landmarks**: Nodes with high degrees are prioritized as landmarks.
+
+---
+
+## **5. NED File Generation**
+The `write_ned_file` function translates the topology into NED format:
+```python
+def write_ned_file(topo_filename, output_filename, network_name, routing_alg):
+    ...
+    for link in linklist:
+        outfile.write('\t\t' + a + '.out++ --> {delay = ' + str(abDelay) +'ms; } --> ' + b + '.in++;\n')
+        outfile.write('\t\t' + a + '.in++ <-- {delay = ' + str(baDelay) +'ms; } <-- ' + b + '.out++;\n')
+    ...
+```
+### Structure of the NED File
+1. **Imports**:
+   - Defines node types (`routerNode`, `hostNode`) based on the routing algorithm.
+2. **Parameters**:
+   - Specifies link delays and data rates.
+3. **Submodules**:
+   - Declares routers and hosts.
+4. **Connections**:
+   - Connects nodes with defined delays.
+
+---
+
+## **6. Routing Algorithms**
+The script adapts the node types based on the specified routing algorithm:
+```python
+if routing_alg == 'shortestPath':
+    host_node_type = 'hostNodeBase'
+    router_node_type = 'routerNodeBase'
+elif routing_alg == 'DCTCPRate':
+    host_node_type = 'hostNodePropFairPriceScheme'
+    ...
+```
+- **Examples**:
+  - `shortestPath`: Basic routing logic.
+  - `DCTCP`: Uses congestion control-based routing.
+  - `waterfilling`: Emulates dynamic pricing.
+
+---
+
+## **7. Execution Flow**
+1. **Parse Arguments**: User specifies the graph type, node count, and other parameters.
+2. **Generate Graph**: Create the network topology based on the type.
+3. **Create Topology File**:
+   - Write intermediate topology data (`topo.txt`).
+   - Include node balances, delays, and landmarks.
+4. **Generate NED Files**:
+   - Translate the topology into NED format for each routing algorithm.
+
+---
+
+## **8. Example Workflow**
+### Input:
+```bash
+python create_topo_ned_file.py --num-nodes 50 --graph-type scale_free --balance-per-channel 200 --network-name myNet
+```
+### Output:
+1. **`topo.txt`**: Intermediate topology.
+2. **`myNet_shortestPath.ned`**: NED file for shortest-path routing.
+3. **`myNet_DCTCP.ned`**: NED file for DCTCP routing.
+
+---
+
+## **9. Key Takeaways**
+- **Highly Configurable**: Supports diverse topologies and routing methods.
+- **OMNeT++ Integration**: Generates ready-to-use simulation files.
+- **Realistic Network Models**: Emulates properties like clustering, power laws, and delays.
+
+Let me know if you'd like to dive deeper into any specific part!

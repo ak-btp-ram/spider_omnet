@@ -1,0 +1,82 @@
+This Python code is designed to perform the following operations in sequence:
+
+### **Purpose:**
+The script collects and analyzes ping times (Round Trip Times, RTT) to a set of nodes defined in a JSON file. It also provides options for re-pinging the nodes or processing previously recorded ping data. The results are visualized as a cumulative histogram.
+
+---
+
+### **Breakdown of Functions:**
+
+#### 1. **`parse_json_data()`**
+- **Purpose:** Reads a JSON file to extract a list of IP addresses for nodes to ping.
+- **Steps:**
+  - Opens a JSON file (`lnd_july15_2019.json`) located at the path defined by `LND_FILE_PATH` in the `config` module.
+  - Extracts the `"nodes"` key from the JSON, iterating over each node's `"addresses"`.
+  - Filters out addresses containing `"onion"` (used for Tor network) and appends the rest to `ping_addresses`.
+
+#### 2. **`ping_node(ip_addr)`**
+- **Purpose:** Pings a specific IP address and returns the ping statistics as a dictionary.
+- **Steps:**
+  - Uses `pingparsing.PingTransmitter` to send 10 ICMP ping packets to the destination `ip_addr`.
+  - Parses the result with `pingparsing.PingParsing`.
+  - Handles errors by returning `None` and printing the raw result if parsing fails.
+
+#### 3. **`ping_nodes(addr_list)`**
+- **Purpose:** Pings all nodes in the provided list of addresses, aggregates RTT data, and calculates basic statistics.
+- **Steps:**
+  - Iterates over `addr_list`, extracts the IP portion from addresses (`split(":")[0]`).
+  - Calls `ping_node` for each address.
+  - Writes RTT averages to a file (`ping_times_data`) and prints addresses with RTT < 10 ms.
+  - Computes and prints the **mean**, **median**, and **variance** of the RTTs collected.
+
+#### 4. **`parse_rtts_from_file()`**
+- **Purpose:** Reads RTT values from the previously saved file (`ping_times_data`).
+- **Steps:**
+  - Opens the file and reads line by line.
+  - Filters out invalid lines (containing `"None"` or spaces) and converts valid lines to `float`.
+  - Returns the list of RTTs.
+
+#### 5. **`visualize_rtts(rtts)`**
+- **Purpose:** Visualizes the RTT data using a cumulative histogram.
+- **Steps:**
+  - Plots a histogram of RTTs with 100 bins, normalized and cumulative.
+  - Saves the plot to a PDF file (`lnd_ping_rtt_spread.pdf`).
+  - Prints basic statistics: **mean**, **median**, **variance**, **max**, and **min** of RTTs.
+
+---
+
+### **Execution Flow:**
+
+1. **Command-Line Argument Parsing:**
+   - The script uses the `--rerun-ping` flag to determine whether to rerun ping operations or use existing data.
+   - `args.rerun_ping` is set to `True` if the flag is provided.
+
+2. **Address List Parsing:**
+   - Calls `parse_json_data` to get the list of IP addresses to ping.
+
+3. **Ping Operations or File Parsing:**
+   - If `--rerun-ping` is provided:
+     - Calls `ping_nodes` to ping all nodes and collect RTT data.
+   - Otherwise:
+     - Calls `parse_rtts_from_file` to load RTTs from the saved file.
+
+4. **Visualization:**
+   - Calls `visualize_rtts` to generate and save the RTT histogram and print statistics.
+
+---
+
+### **Key Outputs:**
+1. **File Outputs:**
+   - `ping_times_data`: Contains RTT averages for all pinged nodes.
+   - `lnd_ping_rtt_spread.pdf`: A cumulative histogram of RTTs.
+
+2. **Statistics:**
+   - **Mean RTT:** Average of all RTTs.
+   - **Median RTT:** Middle RTT value.
+   - **Variance:** Spread of RTT values.
+   - **Max/Min RTT:** Highest and lowest RTT values.
+
+3. **Console Logs:**
+   - Number of addresses processed.
+   - Nodes with RTT < 10 ms.
+   - Summary statistics for RTTs. 

@@ -1,0 +1,175 @@
+The provided script appears to be part of a larger project involving simulation, data analysis, and plotting for a Payment Channel Network (PCN) or a similar distributed system. Below is a detailed explanation of each section and its purpose:
+
+---
+
+### **1. Constants and Path Definitions**
+
+```python
+HOME = os.getenv('HOME')
+OMNET = os.getenv('OMNET')
+KAGGLE_PATH = HOME + '/' + OMNET + '/samples/spider_omnet/scripts/data/'
+KAGGLE_AMT_DIST_FILENAME = KAGGLE_PATH + 'amt_dist.npy'
+KAGGLE_AMT_MODIFIED_DIST_FILENAME = KAGGLE_PATH + 'amt_dist_cutoff.npy'
+KAGGLE_TIME_DIST_FILENAME = KAGGLE_PATH + 'time_dist.npy'
+```
+
+- **Environment Variables:** `HOME` and `OMNET` are fetched from the system's environment. They determine the base directories for the file paths.
+- **Data Paths:** The script defines paths to files (`amt_dist.npy`, `amt_dist_cutoff.npy`, etc.) for use in a Kaggle project. These files might store data distributions in NumPy format related to transaction amounts and times.
+
+```python
+PATH_PKL_DATA = "path_data/"
+SAT_TO_EUR = 9158
+```
+
+- **`PATH_PKL_DATA`:** Likely a directory for storing pickled data files.
+- **`SAT_TO_EUR`:** A conversion factor from Satoshis (Bitcoin's smallest unit) to Euros.
+
+---
+
+### **2. Simulation Constants**
+
+```python
+SEED = 23
+SEED_LIST = [23, 4773, 76189, 99889, 1968, 2329]
+```
+
+- **Seeds:** These seeds ensure reproducibility in experiments or random operations. `SEED_LIST` provides multiple options for running simulations under different conditions.
+
+```python
+SCALE_AMOUNT = 30
+MEAN_RATE = 10
+CIRCULATION_STD_DEV = 2
+LARGE_BALANCE = 1000000000
+REASONABLE_BALANCE = 15000 
+REASONABLE_ROUTER_BALANCE = 1000
+MIN_TXN_SIZE = 0.1
+MAX_TXN_SIZE = 10
+```
+
+- **Scale Factors and Limits:**
+  - `SCALE_AMOUNT`: Scaling factor for amounts.
+  - `MEAN_RATE`: Average rate of transactions.
+  - `CIRCULATION_STD_DEV`: Standard deviation for balance circulation.
+  - `LARGE_BALANCE`, `REASONABLE_BALANCE`, etc., define balance thresholds for nodes or routers.
+  - `MIN_TXN_SIZE` and `MAX_TXN_SIZE`: Define transaction size limits.
+
+```python
+SMALLEST_UNIT=1
+MEASUREMENT_INTERVAL = 200
+```
+
+- **Measurement Intervals:** Defines intervals for performance measurements.
+
+---
+
+### **3. Network Configurations**
+
+```python
+EC2_INSTANCE_ADDRESS="ec2-34-224-216-215.compute-1.amazonaws.com"
+PORT_NUMBER=8000
+```
+
+- **EC2 Details:** Points to a remote server address and port for communication.
+
+---
+
+### **4. Parameters for Lightning Network Daemon (LND)**
+
+```python
+ENDHOST_LND_ONE_WAY_CAPACITY = 1000000000
+ROUTER_CAPACITY = 100
+LND_FILE_PATH = HOME + "/" + OMNET + "/samples/spider_omnet/lnd_data/"
+LOG_NORMAL_MEAN=-0.6152
+LOG_NORMAL_SCALE=0.7310
+```
+
+- **LND Setup:** These parameters are for simulating nodes in a Lightning Network:
+  - `ENDHOST_LND_ONE_WAY_CAPACITY`: Maximum transaction capacity.
+  - `ROUTER_CAPACITY`: Capacity for intermediate routers.
+  - `LOG_NORMAL_MEAN` and `LOG_NORMAL_SCALE`: Parameters for a log-normal distribution, likely modeling transaction sizes or rates.
+
+---
+
+### **5. OMNeT-Specific Configurations**
+
+```python
+MAX_K = 4
+NUM_LANDMARKS = MAX_K
+```
+
+- **OMNeT++ Parameters:**
+  - `MAX_K`: Limits the number of paths or routes considered.
+  - `NUM_LANDMARKS`: Specifies the number of key nodes (landmarks) for routing.
+
+---
+
+### **6. Recognized Signals for Analysis**
+
+```python
+RECOGNIZED_OMNET_SIGNALS = ["numInQueuePerChannel", "numSentPerChannel", "balancePerChannel", ...]
+```
+
+- **Signal List:** Specifies data points captured during simulations, such as:
+  - Queue sizes (`numInQueuePerChannel`).
+  - Sent transactions (`numSentPerChannel`).
+  - Balance states (`balancePerChannel`).
+
+---
+
+### **7. Mapping Signals to Plots**
+
+```python
+INTERESTING_SIGNALS = dict()
+INTERESTING_SIGNALS["completion_rate_cdfs"] = ["rateCompletedPerDest", "rateArrivedPerDest"]
+...
+```
+
+- **Signal Mapping:** Links signals to specific plots for analysis:
+  - `completion_rate_cdfs`: For cumulative distribution functions of completion rates.
+  - `rateCompleted`, `numCompleted`, etc., track transaction rates, counts, and successes.
+
+---
+
+### **8. Per-Destination and Per-Channel Signals**
+
+```python
+per_dest_list = []
+for signal in ["numWaiting", "probability", "bottleneck", ...]:
+    INTERESTING_SIGNALS[signal] = signal + "PerDest"
+    per_dest_list.append(signal + "PerDest")
+...
+```
+
+- **Per-Destination Signals:** Analyzes signals at the level of individual destinations.
+- **Per-Channel Signals:** Includes data like balances and queue sizes for specific channels.
+
+---
+
+### **9. ggplot Configuration**
+
+```python
+PLOT_DIR = "data/"
+GGPLOT_DATA_DIR = "ggplot_data/"
+SUMMARY_DIR = "figures/"
+RESULT_DIR = HOME + "/" + OMNET + "/samples/spider_omnet/benchmarks/circulations/results/"
+```
+
+- **Plot Directories:** Organizes directories for storing data and visualizations.
+
+---
+
+### **10. Plot Scheme and Percent Mappings**
+
+```python
+SCHEME_CODE = { "priceSchemeWindow": "PS", "lndBaseline": "LND", ... }
+PERCENT_MAPPING = { '0': 0, '20': 5, '45': 20, '65': 40 }
+```
+
+- **`SCHEME_CODE`:** Shorthand codes for routing schemes.
+- **`PERCENT_MAPPING`:** Maps simulation parameters to percentages for plotting.
+
+---
+
+### **Purpose of the Script**
+
+This script configures a large-scale simulation of a Payment Channel Network (PCN) or similar distributed system, using tools like OMNeT++ for simulations and ggplot for visualization. It integrates data collection, signal parsing, and visualization to evaluate network performance under various scenarios.
